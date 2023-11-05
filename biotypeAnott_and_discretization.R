@@ -3,6 +3,8 @@ library(biomaRt)
 
 #Load expression data
 expre_junto <- vroom::vroom(file = expre_junto.csv,delim=",")
+identificadores<-expre_junto %>% 
+  pull(identificadores)
 
 ##Annotate gene_biotype
 mart=useEnsembl("ensembl",dataset="hsapiens_gene_ensembl")
