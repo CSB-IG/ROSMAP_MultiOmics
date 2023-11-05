@@ -23,3 +23,8 @@ expression_mat_values <-expression_mat %>%
 
 #Data discretization
 mat_dis<-infotheo::discretize(t(expression_mat_values))
+
+#Save important data
+vroom::vroom_write(expre, 'RNAseq_expre_annot_data.csv', delim = ',')
+vroom::vroom_write(expression_mat, 'RNAseq_protcod_expremat.csv', delim = ',')
+vroom::vroom_write(mat_dis, 'RNAseq_discretized_mat.csv', delim = ',')
