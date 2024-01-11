@@ -9,28 +9,22 @@ library(ggplot2)
 ##Load MI mat
 mat_mi_rosmap<- vroom::vroom(file="matriz_coexpre_allAD_11052023_zero.txt") #cargar matriz de coexpre
 
-##Create network from matrix
-#Option 1)Specific threshold 
-  #g<-mat_mi_rosmap%>% pivot_longer(cols = -gene,names_to='gene_to',values_to='mi') %>% 
-  #  filter(mi >= 0.5) %>% 
-  #  graph_from_data_frame(d=.,directed=F)
-
-#Option 2) Top 10k edges
-#Obtain top 10k edges:
-matrix<-subset(mat_mi_rosmap, select = -gene)
-mat_colapse<-unlist(matrix, use.names=FALSE) 
-x<-tail(sort(mat_colapse),10000) 
-x<-as_tibble(x) #From x extract lowest value to use for threshold
-g<-mat_mi_rosmap%>% tidyr::pivot_longer(cols = -gene,names_to='gene_to',values_to='mi') %>% 
-  filter(mi >= 0.8250788) %>% 
+##Network from matrix
+g<-mat_mi_rosmap%>% tidyr::pivot_longer(cols = -gene,
+  names_to='gene_to',values_to='mi') %>% 
   graph_from_data_frame(d=.,directed=F)
 
+#Subset edges
+valor_corte<-0.8
+borrar_enlaces <-E(g)[mi <valor_corte]
+g<- delete_edges(g,edges = borrar_enlaces)
 
-##Olfactory genes subgraph
+                      ##Olfactory genes subgraph##
+#Load olfactory genes from dataset
 olfatory_genes<- vroom::vroom(file="ROSMAP_olfaction_genes.csv", delim = ',')
 
 ##Graph subset
-##Paso 1: Tidying ensemble ids, adding number to each node
+##1) Tidying ensemble ids, adding number to each node
 vertices<-vertex_attr(g) %>% as_tibble() #Nombres nodos
 numero_vertices<-row.names(vertices) #Número nodos
 vertices$number <-numero_vertices
@@ -51,15 +45,20 @@ vertices_interes<- c(vertices_interes_olf, primeros_vecinos %>% pull(value))
 #Subgraph from vertex of interest
 sub_g<-subgraph(g,vertices_interes)
 
-plot(sub_g,edge.arrow.size=.5, vertex.label.color="black", vertex.label.dist=1.5,
-     
-     vertex.color='pink',vertex.size=2,vertex.label=NA)
+#subgraph vertexs with biofun anotation
+nodos_subg<-vertex_attr(sub_g) %>% as_tibble() 
+nodos_subg<-inner_join(vertices,nodos_subg)
+nodos_subg$bio_func <- ifelse(nodos_subg$number %in% vertices_interes_olf, "olfaction", "other")
 
-#Medidas de centralidad
-Indegree <- degree(sub_g, mode="in")
+#Subgraph centrality
+node_degree <- degree(sub_g) 
+nodos_subg$degree <-node_degree
 
-vertices_olfato$Indegree <-Indegree##Hay un error aquí porque vertices olfato no tiene los primvecinos
+Betweenness <- betweenness(sub_g)
+nodos_subg$Betweenness <-Betweenness
 
-vertices_olfato %>% dplyr::group_by(Indegree) %>% 
-  tally()%>% ggplot(aes(x=Indegree,y=n))+
-  geom_bar(stat="identity")
+##Subgraph global description
+subg_size<-gsize(sub_g)
+componentes<-components(sub_g)
+cc<-transitivity(sub_g,type = "global")
+cc_local<-transitivity(sub_g,type = "local")

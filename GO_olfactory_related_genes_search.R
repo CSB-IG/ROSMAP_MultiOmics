@@ -5,13 +5,14 @@ library(org.Hs.eg.db)
 
 #Part 1: GO anottation search
 
-##Todas las etiquetas de GO
+##GO database
 all_go_terms <- keys(org.Hs.eg.db, keytype = "GO")
 
-##Etiqueta GO + proceso fisio relacionado
-mis_go <- AnnotationDbi::select(GO.db, keys = all_go_terms, columns = c("GOID", "TERM"), keytype = "GOID") %>% as_tibble() 
+##GO id + physiological related process
+mis_go <- AnnotationDbi::select(GO.db, keys = all_go_terms, columns = c("GOID", "TERM"), keytype = "GOID") %>% 
+  as_tibble() 
 
-##Busqueda de proceso fisiológico específico
+##Search fo specific biological process or processes
 mis_go_olfatorios <- 
   mis_go %>% 
   filter(grepl(x = TERM, "olfactory|olfaction|hyposmia"))
@@ -42,7 +43,7 @@ genes_olf_anotados <-
 ##Part 2:Inner join with data ENSEMBLE ids
 
 ##Load ensmble ids from data
-nombres<-vroom::vroom(file='/datos/rosmap/ROSMAP_ensembl_id.csv',delim=',')
+nombres<-vroom::vroom(file='ROSMAP_ensembl_id.csv',delim=',')#ENSMBLE IDS from ROSMAP RNAseq data
 
 #Clean ids
 identificadores<-pull(nombres,identificadores)
@@ -53,4 +54,5 @@ colnames(identificadores)[1] <- "ENSEMBL"
 ##Join known GO olfactory ensemble IDS with project data ensemble ids
 ROSMAP_olfaction_genes<-dplyr::inner_join(genes_olf_anotados,identificadores, by='ENSEMBL')
 
+#Save
 vroom::vroom_write(ROSMAP_olfaction_genes, 'ROSMAP_olfaction_genes.csv', delim = ',')
